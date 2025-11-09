@@ -18,16 +18,16 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = local.region
 }
 
 # Data source to get network state
 data "terraform_remote_state" "network" {
   backend = "s3"
   config = {
-    bucket = "terraform-state-20251109"
-    key    = "development/network/terraform.tfstate"
-    region = "ap-northeast-2"
+    bucket = local.network_state_config.bucket
+    key    = local.network_state_config.key
+    region = local.network_state_config.region
   }
 }
 
@@ -47,55 +47,45 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
-# Security Group (하드코딩)
+# Security Group
 resource "aws_security_group" "ec2_sg" {
-  name        = "${var.environment}-ec2-sg"
-  description = "Security group for EC2 instances"
+  name        = local.security_group.name
+  description = local.security_group.description
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
-  ingress {
-    description = "SSH from anywhere"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  dynamic "ingress" {
+    for_each = local.ingress_rules
+    content {
+      description = ingress.value.description
+      from_port   = ingress.value.from_port
+      to_port     = ingress.value.to_port
+      protocol    = ingress.value.protocol
+      cidr_blocks = ingress.value.cidr_blocks
+    }
   }
 
-  ingress {
-    description = "HTTP from anywhere"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTPS from anywhere"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  dynamic "egress" {
+    for_each = local.egress_rules
+    content {
+      description = egress.value.description
+      from_port   = egress.value.from_port
+      to_port     = egress.value.to_port
+      protocol    = egress.value.protocol
+      cidr_blocks = egress.value.cidr_blocks
+    }
   }
 
   tags = merge(
-    var.common_tags,
+    local.common_tags,
     {
-      Name = "${var.environment}-ec2-sg"
+      Name = local.security_group.name
     }
   )
 }
 
-# IAM Role (하드코딩)
+# IAM Role
 resource "aws_iam_role" "ec2_role" {
-  name = "${var.environment}-ec2-role"
+  name = local.iam_config.role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -111,9 +101,9 @@ resource "aws_iam_role" "ec2_role" {
   })
 
   tags = merge(
-    var.common_tags,
+    local.common_tags,
     {
-      Name = "${var.environment}-ec2-role"
+      Name = local.iam_config.role_name
     }
   )
 }
@@ -121,18 +111,18 @@ resource "aws_iam_role" "ec2_role" {
 # IAM Policy attachment - SSM access for EC2
 resource "aws_iam_role_policy_attachment" "ssm_policy" {
   role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  policy_arn = local.ssm_policy_arn
 }
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "${var.environment}-ec2-profile"
+  name = local.iam_config.instance_profile_name
   role = aws_iam_role.ec2_role.name
 
   tags = merge(
-    var.common_tags,
+    local.common_tags,
     {
-      Name = "${var.environment}-ec2-profile"
+      Name = local.iam_config.instance_profile_name
     }
   )
 }
@@ -141,56 +131,56 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 module "ec2_c_type" {
   source = "../../../modules/compute"
 
-  environment                 = var.environment
-  instance_name               = "${var.environment}-c-type-instance"
-  instance_type               = var.c_type_instance_type
+  environment                 = local.environment
+  instance_name               = local.instance_names.c_type
+  instance_type               = local.instance_types.c_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
   security_group_ids          = [aws_security_group.ec2_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
-  ebs_volume_size             = var.ebs_volume_size
-  ebs_volume_type             = var.ebs_volume_type
-  ebs_encrypted               = var.ebs_encrypted
+  ebs_volume_size             = local.ebs_config.volume_size
+  ebs_volume_type             = local.ebs_config.volume_type
+  ebs_encrypted               = local.ebs_config.encrypted
   enable_credit_specification = false
-  team_tag                    = "compute-team"
-  additional_tags             = var.common_tags
+  team_tag                    = local.team_tags.c_type
+  additional_tags             = local.common_tags
 }
 
 # M Type Instance (General Purpose)
 module "ec2_m_type" {
   source = "../../../modules/compute"
 
-  environment                 = var.environment
-  instance_name               = "${var.environment}-m-type-instance"
-  instance_type               = var.m_type_instance_type
+  environment                 = local.environment
+  instance_name               = local.instance_names.m_type
+  instance_type               = local.instance_types.m_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
   security_group_ids          = [aws_security_group.ec2_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
-  ebs_volume_size             = var.ebs_volume_size
-  ebs_volume_type             = var.ebs_volume_type
-  ebs_encrypted               = var.ebs_encrypted
+  ebs_volume_size             = local.ebs_config.volume_size
+  ebs_volume_type             = local.ebs_config.volume_type
+  ebs_encrypted               = local.ebs_config.encrypted
   enable_credit_specification = false
-  team_tag                    = "platform-team"
-  additional_tags             = var.common_tags
+  team_tag                    = local.team_tags.m_type
+  additional_tags             = local.common_tags
 }
 
 # T Type Instance (Burstable Performance)
 module "ec2_t_type" {
   source = "../../../modules/compute"
 
-  environment                 = var.environment
-  instance_name               = "${var.environment}-t-type-instance"
-  instance_type               = var.t_type_instance_type
+  environment                 = local.environment
+  instance_name               = local.instance_names.t_type
+  instance_type               = local.instance_types.t_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
   security_group_ids          = [aws_security_group.ec2_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
-  ebs_volume_size             = var.ebs_volume_size
-  ebs_volume_type             = var.ebs_volume_type
-  ebs_encrypted               = var.ebs_encrypted
+  ebs_volume_size             = local.ebs_config.volume_size
+  ebs_volume_type             = local.ebs_config.volume_type
+  ebs_encrypted               = local.ebs_config.encrypted
   enable_credit_specification = true
-  credit_specification        = var.t_type_credit_specification
-  team_tag                    = "web-team"
-  additional_tags             = var.common_tags
+  credit_specification        = local.t_series_credit
+  team_tag                    = local.team_tags.t_type
+  additional_tags             = local.common_tags
 }
