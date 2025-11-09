@@ -47,21 +47,6 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
-# Data sources for C Type Instance
-data "aws_iam_instance_profile" "c_type_profile" {
-  name = local.c_type.iam_instance_profile_name
-}
-
-# Data sources for M Type Instance
-data "aws_iam_instance_profile" "m_type_profile" {
-  name = local.m_type.iam_instance_profile_name
-}
-
-# Data sources for T Type Instance
-data "aws_iam_instance_profile" "t_type_profile" {
-  name = local.t_type.iam_instance_profile_name
-}
-
 # C Type Instance (Compute Optimized)
 module "ec2_c_type" {
   source = "../../../modules/compute"
@@ -72,7 +57,7 @@ module "ec2_c_type" {
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
   security_group_ids          = local.c_type.security_group_ids
-  iam_instance_profile        = data.aws_iam_instance_profile.c_type_profile.name
+  iam_instance_profile        = local.c_type.iam_instance_profile_name
   ebs_volume_size             = local.c_type.ebs_config.volume_size
   ebs_volume_type             = local.c_type.ebs_config.volume_type
   ebs_encrypted               = local.c_type.ebs_config.encrypted
@@ -91,7 +76,7 @@ module "ec2_m_type" {
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
   security_group_ids          = local.m_type.security_group_ids
-  iam_instance_profile        = data.aws_iam_instance_profile.m_type_profile.name
+  iam_instance_profile        = local.m_type.iam_instance_profile_name
   ebs_volume_size             = local.m_type.ebs_config.volume_size
   ebs_volume_type             = local.m_type.ebs_config.volume_type
   ebs_encrypted               = local.m_type.ebs_config.encrypted
@@ -110,7 +95,7 @@ module "ec2_t_type" {
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
   security_group_ids          = local.t_type.security_group_ids
-  iam_instance_profile        = data.aws_iam_instance_profile.t_type_profile.name
+  iam_instance_profile        = local.t_type.iam_instance_profile_name
   ebs_volume_size             = local.t_type.ebs_config.volume_size
   ebs_volume_type             = local.t_type.ebs_config.volume_type
   ebs_encrypted               = local.t_type.ebs_config.encrypted
