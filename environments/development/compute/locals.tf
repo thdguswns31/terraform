@@ -44,55 +44,20 @@ locals {
   # T Series Credit Specification
   t_series_credit = "standard" # or "unlimited"
 
-  # Security Group Configuration
-  security_group = {
-    name        = "${local.name_prefix}-ec2-sg"
-    description = "Security group for EC2 instances"
-  }
+  # ========================================
+  # Existing AWS Resources (Manual Input Required)
+  # ========================================
+  # DevOps Engineer: Please update these IDs with your existing AWS resources
 
-  # Security Group Rules
-  ingress_rules = [
-    {
-      description = "SSH from anywhere"
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    },
-    {
-      description = "HTTP from anywhere"
-      from_port   = 80
-      to_port     = 80
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    },
-    {
-      description = "HTTPS from anywhere"
-      from_port   = 443
-      to_port     = 443
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  ]
+  # Security Group ID
+  # Example: "sg-0123456789abcdef0"
+  # To find your SG ID: AWS Console > EC2 > Security Groups or run `aws ec2 describe-security-groups`
+  security_group_id = "sg-07aaa5f9d2487b57b"
 
-  egress_rules = [
-    {
-      description = "Allow all outbound traffic"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  ]
-
-  # IAM Configuration
-  iam_config = {
-    role_name             = "${local.name_prefix}-ec2-role"
-    instance_profile_name = "${local.name_prefix}-ec2-profile"
-  }
-
-  # SSM Policy ARN
-  ssm_policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  # IAM Instance Profile Name
+  # Example: "my-ec2-instance-profile"
+  # To find your profile: AWS Console > IAM > Roles > Instance Profiles or run `aws iam list-instance-profiles`
+  iam_instance_profile_name = "development-ec2-profile"
 
   # Common Tags
   common_tags = {
