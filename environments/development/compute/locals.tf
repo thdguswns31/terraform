@@ -32,7 +32,7 @@ locals {
     enable_credit_specification = false
     credit_specification        = null
     security_group_ids = [
-      "sg-07aaa5f9d2487b57b",
+      "sg-02c5fbd7d50f084d1",
     ]
     iam_instance_profile_name = "development-ec2-profile"
     ebs_config = local.default_ebs_config
@@ -45,7 +45,7 @@ locals {
     enable_credit_specification = false
     credit_specification        = null
     security_group_ids = [
-      "sg-07aaa5f9d2487b57b",
+      "sg-02c5fbd7d50f084d1",
     ]
     iam_instance_profile_name = "development-ec2-profile"
     ebs_config = local.default_ebs_config
@@ -58,7 +58,7 @@ locals {
     enable_credit_specification = true
     credit_specification        = "standard"
     security_group_ids = [
-      "sg-07aaa5f9d2487b57b",
+      "sg-02c5fbd7d50f084d1",
     ]
     iam_instance_profile_name = "development-ec2-profile"
     ebs_config = local.default_ebs_config
