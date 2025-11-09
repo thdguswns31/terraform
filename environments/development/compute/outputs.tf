@@ -50,7 +50,7 @@ output "c_type_security_group_ids" {
 
 output "c_type_iam_instance_profile" {
   description = "IAM instance profile for C type instance"
-  value       = data.aws_iam_instance_profile.c_type_profile.name
+  value       = local.c_type.iam_instance_profile_name
 }
 
 output "m_type_security_group_ids" {
@@ -60,7 +60,7 @@ output "m_type_security_group_ids" {
 
 output "m_type_iam_instance_profile" {
   description = "IAM instance profile for M type instance"
-  value       = data.aws_iam_instance_profile.m_type_profile.name
+  value       = local.m_type.iam_instance_profile_name
 }
 
 output "t_type_security_group_ids" {
@@ -70,5 +70,5 @@ output "t_type_security_group_ids" {
 
 output "t_type_iam_instance_profile" {
   description = "IAM instance profile for T type instance"
-  value       = data.aws_iam_instance_profile.t_type_profile.name
+  value       = local.t_type.iam_instance_profile_name
 }
