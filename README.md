@@ -101,8 +101,6 @@ export AWS_DEFAULT_REGION="ap-northeast-2"
 - **Security Group**: `sg-07aaa5f9d2487b57b`
 - **IAM Instance Profile**: `development-ec2-profile`
 
-> **참고**: 이 리소스들은 현재 하드코딩되어 있으며, Terraform으로 관리되지 않습니다. 추후 Terraform으로 관리하도록 변경할 수 있습니다.
-
 ## 초기 설정
 
 프로젝트를 처음 사용할 때는 다음 순서대로 진행합니다.
@@ -110,11 +108,11 @@ export AWS_DEFAULT_REGION="ap-northeast-2"
 ### 1단계: 프로젝트 클론
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/thdguswns31/terraform.git
 cd terraform
 ```
 
-### 2단계: 백엔드 인프라 생성 (최초 1회만)
+### 2단계: 백엔드 인프라 생성 (최초 1회만 수행)
 
 Terraform 상태 파일을 저장할 S3 버킷과 DynamoDB 테이블을 생성합니다.
 
@@ -559,180 +557,3 @@ git push
 | `terraform fmt -recursive` | 재귀적 포맷팅 |
 | `terraform validate` | 문법 검증 |
 | `terraform fmt -check` | 포맷팅 필요 여부만 확인 |
-
-## 문제 해결
-
-### 자주 발생하는 문제
-
-#### 1. 백엔드 초기화 실패
-
-**증상**:
-```
-Error: Failed to get existing workspaces: S3 bucket does not exist
-```
-
-**해결 방법**:
-먼저 백엔드 인프라를 생성해야 합니다.
-```bash
-cd /Users/joon/git/thdguswns31/terraform
-terraform init
-terraform apply
-```
-
-#### 2. 상태 파일 잠금 오류
-
-**증상**:
-```
-Error: Error locking state: Error acquiring the state lock
-```
-
-**해결 방법**:
-다른 사람이 작업 중이거나 이전 작업이 비정상 종료되었습니다.
-```bash
-# 강제로 잠금 해제 (주의: 다른 사람이 작업 중이 아닌지 확인!)
-terraform force-unlock <LOCK_ID>
-```
-
-#### 3. AMI를 찾을 수 없음
-
-**증상**:
-```
-Error: Error launching source instance: InvalidAMIID.NotFound
-```
-
-**해결 방법**:
-올바른 리전의 AMI ID를 사용하고 있는지 확인하세요. 현재 프로젝트는 Data Source로 최신 Amazon Linux 2023을 자동으로 찾습니다.
-
-#### 4. Security Group이 존재하지 않음
-
-**증상**:
-```
-Error: InvalidGroup.NotFound
-```
-
-**해결 방법**:
-[locals.tf](environments/development/compute/locals.tf)의 Security Group ID가 실제로 존재하는지 확인:
-```bash
-aws ec2 describe-security-groups --group-ids sg-07aaa5f9d2487b57b --region ap-northeast-2
-```
-
-#### 5. IAM Instance Profile이 존재하지 않음
-
-**증상**:
-```
-Error: InvalidParameterValue: Instance profile does not exist
-```
-
-**해결 방법**:
-IAM Instance Profile을 먼저 생성하거나, [locals.tf](environments/development/compute/locals.tf)에서 `iam_instance_profile` 값을 수정:
-```bash
-# IAM Instance Profile 확인
-aws iam get-instance-profile --instance-profile-name development-ec2-profile
-```
-
-### 디버깅 팁
-
-#### 상세 로그 보기
-
-```bash
-# 디버그 로그 활성화
-export TF_LOG=DEBUG
-terraform apply
-
-# 로그를 파일로 저장
-export TF_LOG=DEBUG
-export TF_LOG_PATH=./terraform.log
-terraform apply
-```
-
-#### 특정 리소스만 적용/삭제
-
-```bash
-# 특정 리소스만 적용
-terraform apply -target=module.vpc
-
-# 특정 리소스만 삭제
-terraform destroy -target=module.compute.aws_instance.this["t-type"]
-```
-
-#### 변경 사항 자세히 보기
-
-```bash
-# JSON 형식으로 계획 저장
-terraform plan -out=tfplan
-terraform show -json tfplan > plan.json
-
-# 읽기 쉬운 형태로 보기
-terraform show tfplan
-```
-
-## 베스트 프랙티스
-
-### 1. 상태 파일 관리
-
-- 절대 상태 파일을 수동으로 편집하지 마세요
-- Git에 상태 파일을 커밋하지 마세요 (`.gitignore`에 추가됨)
-- 정기적으로 백업하세요 (S3 버전 관리 활성화됨)
-
-### 2. 코드 작성
-
-- 항상 `terraform fmt`로 코드를 포맷팅하세요
-- 의미 있는 변수명과 리소스명을 사용하세요
-- 모든 변수에 `description`을 작성하세요
-- 중요한 값은 출력(`output`)으로 노출하세요
-
-### 3. 보안
-
-- AWS 자격 증명을 코드에 하드코딩하지 마세요
-- 민감한 정보는 AWS Secrets Manager나 Parameter Store를 사용하세요
-- Security Group 규칙을 최소 권한 원칙으로 설정하세요
-- EBS 볼륨 암호화를 활성화하세요 (현재 설정됨)
-
-### 4. 협업
-
-- 변경 전에 항상 `terraform plan`을 실행하세요
-- 큰 변경사항은 PR(Pull Request)로 리뷰받으세요
-- 커밋 메시지에 변경 이유를 명확히 작성하세요
-- 작업 전에 `git pull`로 최신 코드를 받으세요
-
-### 5. 비용 관리
-
-- 사용하지 않는 리소스는 `terraform destroy`로 삭제하세요
-- 적절한 인스턴스 타입을 선택하세요
-- 개발 환경은 업무 시간에만 실행하는 것을 고려하세요
-
-## 추가 리소스
-
-### Terraform 공식 문서
-
-- [Terraform 공식 문서](https://www.terraform.io/docs)
-- [AWS Provider 문서](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [Terraform Best Practices](https://www.terraform-best-practices.com/)
-
-### AWS 리소스
-
-- [AWS VPC 사용 설명서](https://docs.aws.amazon.com/vpc/)
-- [AWS EC2 사용 설명서](https://docs.aws.amazon.com/ec2/)
-
-### 도구
-
-- [Terraform VSCode Extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform)
-- [tflint](https://github.com/terraform-linters/tflint) - Terraform 린터
-- [terraform-docs](https://terraform-docs.io/) - 문서 자동 생성
-
-## 라이선스
-
-이 프로젝트는 내부 인프라 관리용입니다.
-
-## 기여하기
-
-변경 사항이 있다면:
-
-1. 새 브랜치를 생성하세요: `git checkout -b feature/my-new-feature`
-2. 변경 사항을 커밋하세요: `git commit -am 'feat: Add new feature'`
-3. 브랜치에 푸시하세요: `git push origin feature/my-new-feature`
-4. Pull Request를 생성하세요
-
-## 문의
-
-문제가 발생하거나 질문이 있으면 팀에 문의하세요.
