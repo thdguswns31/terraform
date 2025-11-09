@@ -14,7 +14,7 @@ locals {
   }
 
   default_ebs_config = {
-    volume_size = 20
+    volume_size = 30
     volume_type = "gp3"
     encrypted   = true
   }
