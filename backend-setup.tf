@@ -1,6 +1,6 @@
 # S3 Bucket for Terraform State
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "terraform-state-20251109"  # 고유한 버킷 이름
+  bucket = "terraform-state-20251109" # 고유한 버킷 이름
 
   tags = {
     Name        = "Terraform State Bucket"
