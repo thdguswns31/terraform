@@ -47,14 +47,19 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
-# Data source to reference existing Security Group
-data "aws_security_group" "ec2_sg" {
-  id = local.security_group_id
+# Data sources for C Type Instance
+data "aws_iam_instance_profile" "c_type_profile" {
+  name = local.c_type.iam_instance_profile_name
 }
 
-# Data source to reference existing IAM Instance Profile
-data "aws_iam_instance_profile" "ec2_profile" {
-  name = local.iam_instance_profile_name
+# Data sources for M Type Instance
+data "aws_iam_instance_profile" "m_type_profile" {
+  name = local.m_type.iam_instance_profile_name
+}
+
+# Data sources for T Type Instance
+data "aws_iam_instance_profile" "t_type_profile" {
+  name = local.t_type.iam_instance_profile_name
 }
 
 # C Type Instance (Compute Optimized)
@@ -62,17 +67,17 @@ module "ec2_c_type" {
   source = "../../../modules/compute"
 
   environment                 = local.environment
-  instance_name               = local.instance_names.c_type
-  instance_type               = local.instance_types.c_type
+  instance_name               = local.c_type.instance_name
+  instance_type               = local.c_type.instance_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
-  security_group_ids          = [data.aws_security_group.ec2_sg.id]
-  iam_instance_profile        = data.aws_iam_instance_profile.ec2_profile.name
-  ebs_volume_size             = local.ebs_config.volume_size
-  ebs_volume_type             = local.ebs_config.volume_type
-  ebs_encrypted               = local.ebs_config.encrypted
-  enable_credit_specification = false
-  team_tag                    = local.team_tags.c_type
+  security_group_ids          = local.c_type.security_group_ids
+  iam_instance_profile        = data.aws_iam_instance_profile.c_type_profile.name
+  ebs_volume_size             = local.c_type.ebs_config.volume_size
+  ebs_volume_type             = local.c_type.ebs_config.volume_type
+  ebs_encrypted               = local.c_type.ebs_config.encrypted
+  enable_credit_specification = local.c_type.enable_credit_specification
+  team_tag                    = local.c_type.team_tag
   additional_tags             = local.common_tags
 }
 
@@ -81,17 +86,17 @@ module "ec2_m_type" {
   source = "../../../modules/compute"
 
   environment                 = local.environment
-  instance_name               = local.instance_names.m_type
-  instance_type               = local.instance_types.m_type
+  instance_name               = local.m_type.instance_name
+  instance_type               = local.m_type.instance_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
-  security_group_ids          = [data.aws_security_group.ec2_sg.id]
-  iam_instance_profile        = data.aws_iam_instance_profile.ec2_profile.name
-  ebs_volume_size             = local.ebs_config.volume_size
-  ebs_volume_type             = local.ebs_config.volume_type
-  ebs_encrypted               = local.ebs_config.encrypted
-  enable_credit_specification = false
-  team_tag                    = local.team_tags.m_type
+  security_group_ids          = local.m_type.security_group_ids
+  iam_instance_profile        = data.aws_iam_instance_profile.m_type_profile.name
+  ebs_volume_size             = local.m_type.ebs_config.volume_size
+  ebs_volume_type             = local.m_type.ebs_config.volume_type
+  ebs_encrypted               = local.m_type.ebs_config.encrypted
+  enable_credit_specification = local.m_type.enable_credit_specification
+  team_tag                    = local.m_type.team_tag
   additional_tags             = local.common_tags
 }
 
@@ -100,17 +105,17 @@ module "ec2_t_type" {
   source = "../../../modules/compute"
 
   environment                 = local.environment
-  instance_name               = local.instance_names.t_type
-  instance_type               = local.instance_types.t_type
+  instance_name               = local.t_type.instance_name
+  instance_type               = local.t_type.instance_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
-  security_group_ids          = [data.aws_security_group.ec2_sg.id]
-  iam_instance_profile        = data.aws_iam_instance_profile.ec2_profile.name
-  ebs_volume_size             = local.ebs_config.volume_size
-  ebs_volume_type             = local.ebs_config.volume_type
-  ebs_encrypted               = local.ebs_config.encrypted
-  enable_credit_specification = true
-  credit_specification        = local.t_series_credit
-  team_tag                    = local.team_tags.t_type
+  security_group_ids          = local.t_type.security_group_ids
+  iam_instance_profile        = data.aws_iam_instance_profile.t_type_profile.name
+  ebs_volume_size             = local.t_type.ebs_config.volume_size
+  ebs_volume_type             = local.t_type.ebs_config.volume_type
+  ebs_encrypted               = local.t_type.ebs_config.encrypted
+  enable_credit_specification = local.t_type.enable_credit_specification
+  credit_specification        = local.t_type.credit_specification
+  team_tag                    = local.t_type.team_tag
   additional_tags             = local.common_tags
 }

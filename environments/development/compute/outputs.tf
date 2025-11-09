@@ -43,17 +43,32 @@ output "t_type_instance_private_ip" {
   value       = module.ec2_t_type.instance_private_ip
 }
 
-output "security_group_id" {
-  description = "ID of the EC2 security group (referenced from existing resource)"
-  value       = data.aws_security_group.ec2_sg.id
+output "c_type_security_group_ids" {
+  description = "Security Group IDs for C type instance"
+  value       = local.c_type.security_group_ids
 }
 
-output "iam_instance_profile_name" {
-  description = "Name of the IAM instance profile (referenced from existing resource)"
-  value       = data.aws_iam_instance_profile.ec2_profile.name
+output "c_type_iam_instance_profile" {
+  description = "IAM instance profile for C type instance"
+  value       = data.aws_iam_instance_profile.c_type_profile.name
 }
 
-output "iam_instance_profile_arn" {
-  description = "ARN of the IAM instance profile (referenced from existing resource)"
-  value       = data.aws_iam_instance_profile.ec2_profile.arn
+output "m_type_security_group_ids" {
+  description = "Security Group IDs for M type instance"
+  value       = local.m_type.security_group_ids
+}
+
+output "m_type_iam_instance_profile" {
+  description = "IAM instance profile for M type instance"
+  value       = data.aws_iam_instance_profile.m_type_profile.name
+}
+
+output "t_type_security_group_ids" {
+  description = "Security Group IDs for T type instance"
+  value       = local.t_type.security_group_ids
+}
+
+output "t_type_iam_instance_profile" {
+  description = "IAM instance profile for T type instance"
+  value       = data.aws_iam_instance_profile.t_type_profile.name
 }
