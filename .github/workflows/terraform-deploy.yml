@@ -94,6 +94,8 @@ jobs:
     name: 'Terraform Plan - Compute'
     runs-on: ubuntu-latest
     needs: terraform-plan-network  # network 완료 후 실행
+    outputs:
+      has_changes: ${{ steps.plan-compute.outputs.has_changes }}
 
     steps:
       - name: Checkout
@@ -182,10 +184,13 @@ jobs:
 
   terraform-apply-compute:
     name: 'Terraform Apply - Compute'
-    needs: terraform-apply-network  # network apply 완료 후 실행
+    needs: [terraform-apply-network, terraform-plan-compute]  # network apply 완료 후 실행, plan-compute outputs 참조
     runs-on: ubuntu-latest
     environment: production  # GitHub Environment for approval
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: |
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.terraform-plan-compute.outputs.has_changes == 'true'
 
     steps:
       - name: Checkout
