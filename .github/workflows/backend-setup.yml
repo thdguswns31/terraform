@@ -1,0 +1,69 @@
+name: Backend Setup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-backend:
+    name: Terraform Backend 초기 설정
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Terraform 설치
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: AWS 자격 증명 구성
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Backend 리소스 배포
+        run: |
+          echo "=========================================="
+          echo "Terraform Backend 설정 시작"
+          echo "=========================================="
+
+          # Terraform 초기화 (로컬 백엔드 사용)
+          echo ">> Terraform 초기화 중..."
+          terraform init
+
+          # Terraform Plan
+          echo ">> Terraform Plan 실행 중..."
+          terraform plan -out=backend-plan
+
+          # Plan 결과 표시
+          terraform show backend-plan
+
+          # Terraform Apply
+          echo ">> Terraform Apply 실행 중..."
+          terraform apply backend-plan
+
+          echo ""
+          echo "=========================================="
+          echo "✅ Backend 설정 완료"
+          echo "=========================================="
+
+      - name: Backend 정보 출력
+        if: success()
+        run: |
+          echo ""
+          echo "📌 Backend 설정이 완료되었습니다."
+          echo "다음 정보를 Terraform backend 구성에 사용하세요:"
+          echo ""
+          terraform output -json | jq -r 'to_entries[] | "- \(.key): \(.value.value)"'
+          echo ""
+          echo "배포 완료 시간: $(date '+%Y-%m-%d %H:%M:%S')"
+
+      - name: 배포 실패 알림
+        if: failure()
+        run: |
+          echo "❌ Backend 설정이 실패했습니다."
+          echo "AWS 자격 증명과 권한을 확인해주세요."
+          echo "실패 시간: $(date '+%Y-%m-%d %H:%M:%S')"
