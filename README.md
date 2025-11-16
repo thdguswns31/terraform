@@ -53,7 +53,8 @@ terraform/
         │   └── .terraform.lock.hcl
         └── compute/           # 컴퓨트 스택 (EC2)
             ├── main.tf       # EC2 모듈 호출 및 구성
-            ├── locals.tf     # 로컬 변수 (인스턴스 설정)
+            ├── variables.tf  # 입력 변수 정의
+            ├── terraform.tfvars  # 실제 변수 값
             ├── outputs.tf    # 출력 값
             └── .terraform.lock.hcl
 ```
@@ -358,15 +359,15 @@ common_tags = {
 }
 ```
 
-#### 컴퓨트 설정 (`environments/development/compute/locals.tf`)
+#### 컴퓨트 설정 (`environments/development/compute/terraform.tfvars`)
 
 현재 3가지 타입의 EC2 인스턴스가 배포됩니다:
 
 | 인스턴스 이름 | 타입 | 용도 | 팀 | EBS | 크레딧 |
 |--------------|------|------|-----|-----|--------|
-| c-type-instance | c5.large | Compute 최적화 | compute-team | 20GB gp3 | - |
-| m-type-instance | m5.large | 범용 | platform-team | 20GB gp3 | - |
-| t-type-instance | t3.medium | 버스트 가능 | web-team | 20GB gp3 | standard |
+| c-type-instance | c5.large | Compute 최적화 | compute-team | 30GB gp3 | - |
+| m-type-instance | m5.large | 범용 | platform-team | 30GB gp3 | - |
+| t-type-instance | t3.medium | 버스트 가능 | web-team | 30GB gp3 | standard |
 
 **공통 설정**:
 - AMI: Amazon Linux 2023 (최신 버전)
@@ -392,9 +393,9 @@ cp -r environments/development/compute/* environments/staging/compute/
 ```
 
 3. 환경별 값 수정:
-- `terraform.tfvars`에서 CIDR 블록 변경 (예: `10.30.0.0/16`)
+- `terraform.tfvars`에서 환경별 변수 값 변경 (예: CIDR 블록 `10.30.0.0/16`)
 - `main.tf`에서 백엔드 키 변경 (예: `staging/network/terraform.tfstate`)
-- `locals.tf`에서 환경별 설정 조정
+- `variables.tf`에서 기본값 조정 (필요시)
 
 ## 사용 방법
 

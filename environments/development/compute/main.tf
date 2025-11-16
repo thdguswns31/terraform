@@ -18,16 +18,16 @@ terraform {
 }
 
 provider "aws" {
-  region = local.region
+  region = var.aws_region
 }
 
 # Data source to get network state
 data "terraform_remote_state" "network" {
   backend = "s3"
   config = {
-    bucket = local.network_state_config.bucket
-    key    = local.network_state_config.key
-    region = local.network_state_config.region
+    bucket = var.network_state_bucket
+    key    = var.network_state_key
+    region = var.aws_region
   }
 }
 
@@ -51,56 +51,56 @@ data "aws_ami" "amazon_linux_2023" {
 module "ec2_c_type" {
   source = "../../../modules/compute"
 
-  environment                 = local.environment
-  instance_name               = local.c_type.instance_name
-  instance_type               = local.c_type.instance_type
+  environment                 = var.environment
+  instance_name               = "${var.environment}-c-type-instance"
+  instance_type               = var.c_type_instance_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
-  security_group_ids          = local.c_type.security_group_ids
-  iam_instance_profile        = local.c_type.iam_instance_profile_name
-  ebs_volume_size             = local.c_type.ebs_config.volume_size
-  ebs_volume_type             = local.c_type.ebs_config.volume_type
-  ebs_encrypted               = local.c_type.ebs_config.encrypted
-  enable_credit_specification = local.c_type.enable_credit_specification
-  team_tag                    = local.c_type.team_tag
-  additional_tags             = local.common_tags
+  security_group_ids          = [var.security_group_id]
+  iam_instance_profile        = var.iam_instance_profile
+  ebs_volume_size             = var.ebs_volume_size
+  ebs_volume_type             = var.ebs_volume_type
+  ebs_encrypted               = var.ebs_encrypted
+  enable_credit_specification = false
+  team_tag                    = var.c_type_team_tag
+  additional_tags             = var.common_tags
 }
 
 # M Type Instance (General Purpose)
 module "ec2_m_type" {
   source = "../../../modules/compute"
 
-  environment                 = local.environment
-  instance_name               = local.m_type.instance_name
-  instance_type               = local.m_type.instance_type
+  environment                 = var.environment
+  instance_name               = "${var.environment}-m-type-instance"
+  instance_type               = var.m_type_instance_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
-  security_group_ids          = local.m_type.security_group_ids
-  iam_instance_profile        = local.m_type.iam_instance_profile_name
-  ebs_volume_size             = local.m_type.ebs_config.volume_size
-  ebs_volume_type             = local.m_type.ebs_config.volume_type
-  ebs_encrypted               = local.m_type.ebs_config.encrypted
-  enable_credit_specification = local.m_type.enable_credit_specification
-  team_tag                    = local.m_type.team_tag
-  additional_tags             = local.common_tags
+  security_group_ids          = [var.security_group_id]
+  iam_instance_profile        = var.iam_instance_profile
+  ebs_volume_size             = var.ebs_volume_size
+  ebs_volume_type             = var.ebs_volume_type
+  ebs_encrypted               = var.ebs_encrypted
+  enable_credit_specification = false
+  team_tag                    = var.m_type_team_tag
+  additional_tags             = var.common_tags
 }
 
 # T Type Instance (Burstable Performance)
 module "ec2_t_type" {
   source = "../../../modules/compute"
 
-  environment                 = local.environment
-  instance_name               = local.t_type.instance_name
-  instance_type               = local.t_type.instance_type
+  environment                 = var.environment
+  instance_name               = "${var.environment}-t-type-instance"
+  instance_type               = var.t_type_instance_type
   ami_id                      = data.aws_ami.amazon_linux_2023.id
   subnet_id                   = data.terraform_remote_state.network.outputs.public_subnet_id
-  security_group_ids          = local.t_type.security_group_ids
-  iam_instance_profile        = local.t_type.iam_instance_profile_name
-  ebs_volume_size             = local.t_type.ebs_config.volume_size
-  ebs_volume_type             = local.t_type.ebs_config.volume_type
-  ebs_encrypted               = local.t_type.ebs_config.encrypted
-  enable_credit_specification = local.t_type.enable_credit_specification
-  credit_specification        = local.t_type.credit_specification
-  team_tag                    = local.t_type.team_tag
-  additional_tags             = local.common_tags
+  security_group_ids          = [var.security_group_id]
+  iam_instance_profile        = var.iam_instance_profile
+  ebs_volume_size             = var.ebs_volume_size
+  ebs_volume_type             = var.ebs_volume_type
+  ebs_encrypted               = var.ebs_encrypted
+  enable_credit_specification = true
+  credit_specification        = var.t_type_credit_specification
+  team_tag                    = var.t_type_team_tag
+  additional_tags             = var.common_tags
 }
