@@ -13,7 +13,7 @@ resource "aws_instance" "this" {
     delete_on_termination = true
   }
 
-  # T series instance credit specification
+  # T 시리즈 인스턴스 크레딧 사양
   dynamic "credit_specification" {
     for_each = var.enable_credit_specification ? [1] : []
     content {

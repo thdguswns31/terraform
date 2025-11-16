@@ -24,9 +24,9 @@ m_type_instance_type = "m5.large"
 m_type_team_tag      = "platform-team"
 
 # T-Type Instance Configuration (Burstable)
-t_type_instance_type         = "t3.medium"
-t_type_team_tag              = "web-team"
-t_type_credit_specification  = "standard"  # Options: "standard" or "unlimited"
+t_type_instance_type        = "t3.medium"
+t_type_team_tag             = "web-team"
+t_type_credit_specification = "standard" # Options: "standard" or "unlimited"
 
 # Common Tags
 common_tags = {

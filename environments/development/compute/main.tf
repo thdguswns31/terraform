@@ -21,7 +21,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Data source to get network state
+# 네트워크 상태를 가져오기 위한 데이터 소스
 data "terraform_remote_state" "network" {
   backend = "s3"
   config = {
@@ -31,7 +31,7 @@ data "terraform_remote_state" "network" {
   }
 }
 
-# Data source to get latest Amazon Linux 2023 AMI
+# 최신 Amazon Linux 2023 AMI를 가져오기 위한 데이터 소스
 data "aws_ami" "amazon_linux_2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -47,7 +47,7 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
-# C Type Instance (Compute Optimized)
+# C 타입 인스턴스 (컴퓨팅 최적화)
 module "ec2_c_type" {
   source = "../../../modules/compute"
 
@@ -66,7 +66,7 @@ module "ec2_c_type" {
   additional_tags             = var.common_tags
 }
 
-# M Type Instance (General Purpose)
+# M 타입 인스턴스 (범용)
 module "ec2_m_type" {
   source = "../../../modules/compute"
 
@@ -85,7 +85,7 @@ module "ec2_m_type" {
   additional_tags             = var.common_tags
 }
 
-# T Type Instance (Burstable Performance)
+# T 타입 인스턴스 (버스트 가능 성능)
 module "ec2_t_type" {
   source = "../../../modules/compute"
 

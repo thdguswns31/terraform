@@ -1,4 +1,4 @@
-# S3 Bucket for Terraform State
+# Terraform 상태 파일 저장용 S3 버킷
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "terraform-state-20251109" # 고유한 버킷 이름
 
@@ -9,7 +9,7 @@ resource "aws_s3_bucket" "terraform_state" {
   }
 }
 
-# Enable versioning for state file history
+# 상태 파일 이력 관리를 위한 버전 관리 활성화
 resource "aws_s3_bucket_versioning" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -18,7 +18,7 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
   }
 }
 
-# Enable encryption at rest
+# 저장 시 암호화 활성화
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -29,7 +29,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
   }
 }
 
-# Block public access
+# 퍼블릭 액세스 차단
 resource "aws_s3_bucket_public_access_block" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -39,7 +39,7 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
   restrict_public_buckets = true
 }
 
-# DynamoDB table for state locking
+# 상태 잠금을 위한 DynamoDB 테이블
 resource "aws_dynamodb_table" "terraform_state_lock" {
   name         = "terraform-state-lock"
   billing_mode = "PAY_PER_REQUEST"
@@ -57,18 +57,18 @@ resource "aws_dynamodb_table" "terraform_state_lock" {
   }
 }
 
-# Outputs
+# 출력 값
 output "s3_bucket_name" {
-  description = "The name of the S3 bucket for Terraform state"
+  description = "Terraform 상태 파일 저장용 S3 버킷 이름"
   value       = aws_s3_bucket.terraform_state.id
 }
 
 output "dynamodb_table_name" {
-  description = "The name of the DynamoDB table for state locking"
+  description = "상태 잠금용 DynamoDB 테이블 이름"
   value       = aws_dynamodb_table.terraform_state_lock.id
 }
 
 output "s3_bucket_arn" {
-  description = "The ARN of the S3 bucket"
+  description = "S3 버킷의 ARN"
   value       = aws_s3_bucket.terraform_state.arn
 }

@@ -1,24 +1,24 @@
 output "instance_id" {
-  description = "ID of the EC2 instance"
+  description = "EC2 인스턴스의 ID"
   value       = aws_instance.this.id
 }
 
 output "instance_arn" {
-  description = "ARN of the EC2 instance"
+  description = "EC2 인스턴스의 ARN"
   value       = aws_instance.this.arn
 }
 
 output "instance_public_ip" {
-  description = "Public IP of the EC2 instance"
+  description = "EC2 인스턴스의 퍼블릭 IP"
   value       = aws_instance.this.public_ip
 }
 
 output "instance_private_ip" {
-  description = "Private IP of the EC2 instance"
+  description = "EC2 인스턴스의 프라이빗 IP"
   value       = aws_instance.this.private_ip
 }
 
 output "instance_state" {
-  description = "State of the EC2 instance"
+  description = "EC2 인스턴스의 상태"
   value       = aws_instance.this.instance_state
 }

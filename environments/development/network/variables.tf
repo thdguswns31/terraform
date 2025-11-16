@@ -1,41 +1,41 @@
 variable "aws_region" {
-  description = "AWS region for resources"
+  description = "리소스를 위한 AWS 리전"
   type        = string
   default     = "ap-northeast-2"
 }
 
 variable "environment" {
-  description = "Environment name"
+  description = "환경 이름"
   type        = string
   default     = "development"
 }
 
 variable "vpc_cidr" {
-  description = "VPC CIDR block"
+  description = "VPC CIDR 블록"
   type        = string
   default     = "10.20.0.0/16"
 }
 
 variable "public_subnet_cidr" {
-  description = "Public subnet CIDR block"
+  description = "퍼블릭 서브넷 CIDR 블록"
   type        = string
   default     = "10.20.0.0/24"
 }
 
 variable "private_subnet_cidr" {
-  description = "Private subnet CIDR block"
+  description = "프라이빗 서브넷 CIDR 블록"
   type        = string
   default     = "10.20.1.0/24"
 }
 
 variable "availability_zone" {
-  description = "Availability zone for subnets"
+  description = "서브넷의 가용 영역"
   type        = string
   default     = "ap-northeast-2a"
 }
 
 variable "common_tags" {
-  description = "Common tags for all resources"
+  description = "모든 리소스의 공통 태그"
   type        = map(string)
   default = {
     Environment = "development"

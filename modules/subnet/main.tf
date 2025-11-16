@@ -27,7 +27,7 @@ resource "aws_subnet" "private" {
   )
 }
 
-# Public Route Table
+# 퍼블릭 라우트 테이블
 resource "aws_route_table" "public" {
   vpc_id = var.vpc_id
 
@@ -39,20 +39,20 @@ resource "aws_route_table" "public" {
   )
 }
 
-# Public Route to Internet Gateway
+# 인터넷 게이트웨이로의 퍼블릭 라우트
 resource "aws_route" "public_internet_gateway" {
   route_table_id         = aws_route_table.public.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = var.internet_gateway_id
 }
 
-# Associate Public Subnet with Public Route Table
+# 퍼블릭 서브넷과 퍼블릭 라우트 테이블 연결
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
 
-# Private Route Table
+# 프라이빗 라우트 테이블
 resource "aws_route_table" "private" {
   vpc_id = var.vpc_id
 
@@ -64,7 +64,7 @@ resource "aws_route_table" "private" {
   )
 }
 
-# Associate Private Subnet with Private Route Table
+# 프라이빗 서브넷과 프라이빗 라우트 테이블 연결
 resource "aws_route_table_association" "private" {
   subnet_id      = aws_subnet.private.id
   route_table_id = aws_route_table.private.id

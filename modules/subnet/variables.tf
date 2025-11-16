@@ -1,35 +1,35 @@
 variable "environment" {
-  description = "Environment name (production, staging, development)"
+  description = "환경 이름 (production, staging, development)"
   type        = string
 }
 
 variable "vpc_id" {
-  description = "VPC ID where subnets will be created"
+  description = "서브넷이 생성될 VPC ID"
   type        = string
 }
 
 variable "internet_gateway_id" {
-  description = "Internet Gateway ID for public subnet routing"
+  description = "퍼블릭 서브넷 라우팅용 인터넷 게이트웨이 ID"
   type        = string
 }
 
 variable "public_subnet_cidr" {
-  description = "CIDR block for public subnet"
+  description = "퍼블릭 서브넷용 CIDR 블록"
   type        = string
 }
 
 variable "private_subnet_cidr" {
-  description = "CIDR block for private subnet"
+  description = "프라이빗 서브넷용 CIDR 블록"
   type        = string
 }
 
 variable "availability_zone" {
-  description = "Availability zone for the subnets"
+  description = "서브넷의 가용 영역"
   type        = string
 }
 
 variable "tags" {
-  description = "Additional tags for subnet resources"
+  description = "서브넷 리소스에 추가할 태그"
   type        = map(string)
   default     = {}
 }
