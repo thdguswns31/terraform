@@ -60,6 +60,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
 
       - name: Terraform 초기화
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/network
@@ -74,18 +75,20 @@ jobs:
           PLAN_EXIT_CODE=$?
           set -e  # 에러 시 종료 재활성화
 
+          echo "::debug::Terraform plan exit code: $PLAN_EXIT_CODE"
+
           # Exit code 0: 성공 (변경사항 없음)
           # Exit code 1: 에러
           # Exit code 2: 성공 (변경사항 있음)
           if [ "$PLAN_EXIT_CODE" = "1" ]; then
-            echo "Terraform plan failed"
+            echo "::error::Terraform plan 실패 (exit code: 1)"
             exit 1
           elif [ "$PLAN_EXIT_CODE" = "2" ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Terraform plan succeeded with changes"
+            echo "::notice::Terraform plan 성공 - 변경사항 있음"
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "Terraform plan succeeded with no changes"
+            echo "::notice::Terraform plan 성공 - 변경사항 없음"
           fi
 
       - name: Plan 파일 업로드
@@ -121,12 +124,13 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
 
-      - name: Terraform Init
+      - name: Terraform 초기화
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/compute
         run: terraform init
 
-      - name: Terraform Plan
+      - name: Terraform 계획 수립
         id: plan-compute
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/compute
         run: |
@@ -135,30 +139,32 @@ jobs:
           PLAN_EXIT_CODE=$?
           set -e  # 에러 시 종료 재활성화
 
+          echo "::debug::Terraform plan exit code: $PLAN_EXIT_CODE"
+
           # Exit code 0: 성공 (변경사항 없음)
           # Exit code 1: 에러
           # Exit code 2: 성공 (변경사항 있음)
           if [ "$PLAN_EXIT_CODE" = "1" ]; then
-            echo "Terraform plan failed"
+            echo "::error::Terraform plan 실패 (exit code: 1)"
             exit 1
           elif [ "$PLAN_EXIT_CODE" = "2" ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Terraform plan succeeded with changes"
+            echo "::notice::Terraform plan 성공 - 변경사항 있음"
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "Terraform plan succeeded with no changes"
+            echo "::notice::Terraform plan 성공 - 변경사항 없음"
           fi
 
-      - name: Upload Plan
+      - name: Plan 파일 업로드
         if: steps.plan-compute.outputs.has_changes == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-compute
           path: ./environments/${{ github.event.inputs.environment || 'development' }}/compute/tfplan
 
-      - name: No Changes Detected
+      - name: 변경사항 없음 알림
         if: steps.plan-compute.outputs.has_changes == 'false'
-        run: echo "No infrastructure changes detected for compute stack"
+        run: echo "Compute 스택에 인프라 변경사항이 없습니다"
 
   terraform-apply-network:
     name: 'Terraform Apply - Network'
@@ -185,18 +191,19 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
 
-      - name: Download Plan
+      - name: Plan 파일 다운로드
         uses: actions/download-artifact@v4
         with:
           name: tfplan-network
           path: ./environments/${{ github.event.inputs.environment || 'development' }}/network
 
-      - name: Terraform Init
+      - name: Terraform 초기화
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/network
         run: terraform init
 
-      - name: Terraform Apply
+      - name: Terraform 적용
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/network
         run: terraform apply tfplan
 
@@ -225,17 +232,18 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
 
-      - name: Download Plan
+      - name: Plan 파일 다운로드
         uses: actions/download-artifact@v4
         with:
           name: tfplan-compute
           path: ./environments/${{ github.event.inputs.environment || 'development' }}/compute
 
-      - name: Terraform Init
+      - name: Terraform 초기화
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/compute
         run: terraform init
 
-      - name: Terraform Apply
+      - name: Terraform 적용
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/compute
         run: terraform apply tfplan
