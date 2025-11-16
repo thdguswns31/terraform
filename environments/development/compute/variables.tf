@@ -29,7 +29,7 @@ variable "network_state_key" {
 variable "security_group_id" {
   description = "EC2 인스턴스용 보안 그룹 ID"
   type        = string
-  default     = "sg-058b785b4a8b1af91"
+  default     = "sg-053769564fb028daa"
 }
 
 variable "iam_instance_profile" {
