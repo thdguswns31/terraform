@@ -42,6 +42,9 @@ jobs:
   terraform-plan-network:
     name: 'Terraform Plan - Network'
     runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.stack == 'network' ||
+      github.event.inputs.stack == 'all'
     outputs:
       has_changes: ${{ steps.plan-network.outputs.has_changes }}
 
@@ -105,7 +108,11 @@ jobs:
   terraform-plan-compute:
     name: 'Terraform Plan - Compute'
     runs-on: ubuntu-latest
-    needs: terraform-plan-network  # network plan 완료 후 실행
+    needs:
+      - terraform-plan-network
+    if: |
+      github.event.inputs.stack == 'compute' ||
+      github.event.inputs.stack == 'all'
     outputs:
       has_changes: ${{ steps.plan-compute.outputs.has_changes }}
 
@@ -168,13 +175,10 @@ jobs:
 
   terraform-apply-network:
     name: 'Terraform Apply - Network'
-    needs: [terraform-plan-network, terraform-plan-compute]  # 모든 plan 작업이 완료된 후 실행
+    needs: terraform-plan-network
     runs-on: ubuntu-latest
-    environment: production  # GitHub 승인을 위한 Environment 설정
-    if: |
-      github.ref == 'refs/heads/main' &&
-      github.event_name == 'push' &&
-      needs.terraform-plan-network.outputs.has_changes == 'true'
+    environment: ${{ github.event.inputs.environment }}  # GitHub 승인을 위한 Environment 설정
+    if: needs.terraform-plan-network.outputs.has_changes == 'true'
 
     steps:
       - name: 코드 체크아웃
@@ -209,7 +213,9 @@ jobs:
 
   terraform-apply-compute:
     name: 'Terraform Apply - Compute'
-    needs: [terraform-apply-network, terraform-plan-compute]  # network apply 완료 후 실행, plan-compute outputs 참조를 위해 의존성 추가
+    needs:
+      - terraform-plan-compute
+      - terraform-apply-network
     runs-on: ubuntu-latest
     environment: production  # GitHub 승인을 위한 Environment 설정
     if: |
