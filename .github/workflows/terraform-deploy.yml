@@ -71,10 +71,7 @@ jobs:
         if: matrix.stack == 'network' || github.event.inputs.stack == 'all'
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/network
         run: |
-          terraform plan \
-            -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
-            -var="iam_instance_profile=${{ secrets.IAM_INSTANCE_PROFILE }}" \
-            -out=tfplan
+          terraform plan -out=tfplan
 
       - name: Terraform Init - Compute
         if: matrix.stack == 'compute' || github.event.inputs.stack == 'all'
@@ -85,10 +82,7 @@ jobs:
         if: matrix.stack == 'compute' || github.event.inputs.stack == 'all'
         working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/compute
         run: |
-          terraform plan \
-            -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
-            -var="iam_instance_profile=${{ secrets.IAM_INSTANCE_PROFILE }}" \
-            -out=tfplan
+          terraform plan -out=tfplan
 
       - name: Upload Plan
         uses: actions/upload-artifact@v4
