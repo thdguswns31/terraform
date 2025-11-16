@@ -11,10 +11,18 @@ on:
           - development
           - stage
           - production
+      resource_type:
+        description: '배포할 리소스 타입 선택'
+        required: true
+        type: choice
+        options:
+          - network
+          - compute
+          - all
 
 jobs:
   terraform-apply:
-    name: Terraform Apply - ${{ github.event.inputs.environment }}
+    name: Terraform Apply - ${{ github.event.inputs.environment }} - ${{ github.event.inputs.resource_type }}
     runs-on: ubuntu-latest
 
     # 환경별 승인 설정 (production의 경우 수동 승인 필요)
@@ -39,19 +47,47 @@ jobs:
       - name: 리소스 디렉토리 목록 가져오기
         id: get-dirs
         run: |
-          # 선택한 환경의 하위 디렉토리 목록을 가져옴
-          dirs=$(ls -d environments/${{ github.event.inputs.environment }}/*/ 2>/dev/null | sort)
-          if [ -z "$dirs" ]; then
-            echo "환경 디렉토리가 존재하지 않습니다: environments/${{ github.event.inputs.environment }}"
+          # 선택한 리소스 타입에 따라 디렉토리 목록 설정
+          case "${{ github.event.inputs.resource_type }}" in
+            network)
+              dirs="environments/${{ github.event.inputs.environment }}/network/"
+              ;;
+            compute)
+              dirs="environments/${{ github.event.inputs.environment }}/compute/"
+              ;;
+            all)
+              # all인 경우 network → compute 순서로 배포
+              dirs="environments/${{ github.event.inputs.environment }}/network/ environments/${{ github.event.inputs.environment }}/compute/"
+              ;;
+          esac
+
+          # 디렉토리 존재 여부 확인
+          valid_dirs=""
+          for dir in $dirs; do
+            if [ -d "$dir" ]; then
+              if [ -z "$valid_dirs" ]; then
+                valid_dirs="$dir"
+              else
+                valid_dirs="$valid_dirs
+          $dir"
+              fi
+            else
+              echo "경고: 디렉토리가 존재하지 않습니다 - $dir"
+            fi
+          done
+
+          if [ -z "$valid_dirs" ]; then
+            echo "배포할 디렉토리가 없습니다."
             exit 1
           fi
+
           echo "RESOURCE_DIRS<<EOF" >> $GITHUB_OUTPUT
-          echo "$dirs" >> $GITHUB_OUTPUT
+          echo "$valid_dirs" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
           # 디렉토리 목록 출력
           echo "배포할 리소스 디렉토리:"
-          echo "$dirs"
+          echo "$valid_dirs"
 
       - name: Terraform 배포 실행
         run: |
@@ -87,11 +123,11 @@ jobs:
       - name: 배포 완료 알림
         if: success()
         run: |
-          echo "✅ ${{ github.event.inputs.environment }} 환경 Terraform 배포가 성공적으로 완료되었습니다."
+          echo "✅ ${{ github.event.inputs.environment }} 환경 - ${{ github.event.inputs.resource_type }} 리소스 Terraform 배포가 성공적으로 완료되었습니다."
           echo "배포 시간: $(date '+%Y-%m-%d %H:%M:%S')"
 
       - name: 배포 실패 알림
         if: failure()
         run: |
-          echo "❌ ${{ github.event.inputs.environment }} 환경 Terraform 배포가 실패했습니다."
+          echo "❌ ${{ github.event.inputs.environment }} 환경 - ${{ github.event.inputs.resource_type }} 리소스 Terraform 배포가 실패했습니다."
           echo "실패 시간: $(date '+%Y-%m-%d %H:%M:%S')"
