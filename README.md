@@ -399,7 +399,92 @@ cp -r environments/development/compute/* environments/staging/compute/
 
 ## 사용 방법
 
-### 일상적인 작업 흐름
+### GitHub Actions를 통한 자동 배포
+
+이 프로젝트는 GitHub Actions를 통한 자동화된 배포를 지원합니다. 두 가지 워크플로우를 제공합니다:
+
+#### 1. Backend 초기 설정 (`backend-setup.yml`)
+
+Terraform 상태 관리를 위한 S3 버킷과 DynamoDB 테이블을 생성하는 워크플로우입니다.
+
+**실행 방법:**
+1. GitHub 리포지토리의 **Actions** 탭으로 이동
+2. 왼쪽 사이드바에서 **"Backend Setup"** 워크플로우 선택
+3. **"Run workflow"** 버튼 클릭
+4. **"Run workflow"** 확인 버튼 클릭하여 실행
+
+**주요 특징:**
+- 최초 1회만 실행 필요
+- S3 버킷과 DynamoDB 테이블 자동 생성
+- 로컬 백엔드 사용 (원격 백엔드가 아직 없으므로)
+- 생성된 리소스 정보 자동 출력
+
+**생성되는 리소스:**
+- S3 버킷: `terraform-state-20251109`
+- DynamoDB 테이블: `terraform-state-lock`
+
+#### 2. 환경별 인프라 배포 (`terraform-apply.yml`)
+
+Development, Stage, Production 환경의 인프라를 배포하는 워크플로우입니다.
+
+**실행 방법:**
+1. GitHub 리포지토리의 **Actions** 탭으로 이동
+2. 왼쪽 사이드바에서 **"Terraform Apply"** 워크플로우 선택
+3. **"Run workflow"** 버튼 클릭
+4. **환경 선택** 드롭다운에서 배포할 환경 선택:
+   - `development`
+   - `stage`
+   - `production`
+5. **"Run workflow"** 확인 버튼 클릭하여 실행
+
+**주요 특징:**
+- 선택한 환경의 모든 리소스 디렉토리를 순차적으로 배포
+- 각 디렉토리별로 자동으로 plan → apply 수행
+- 배포 순서: network → compute (의존성 순서대로)
+- 환경별 승인 설정 가능 (production의 경우)
+
+**배포 프로세스:**
+1. 선택한 환경의 하위 디렉토리 자동 탐색
+2. 각 디렉토리에서 순차적으로:
+   - Terraform 초기화 (`terraform init`)
+   - 실행 계획 생성 (`terraform plan`)
+   - 변경 사항 적용 (`terraform apply`)
+3. 배포 완료 후 결과 알림
+
+#### 3. GitHub Secrets 설정
+
+GitHub Actions가 AWS 리소스에 접근하려면 다음 시크릿을 설정해야 합니다:
+
+1. 리포지토리의 **Settings** → **Secrets and variables** → **Actions** 이동
+2. **"New repository secret"** 버튼 클릭
+3. 다음 시크릿 추가:
+   - `AWS_ACCESS_KEY_ID`: AWS 액세스 키 ID
+   - `AWS_SECRET_ACCESS_KEY`: AWS 시크릿 액세스 키
+
+**시크릿 설정 예시:**
+```
+Name: AWS_ACCESS_KEY_ID
+Secret: AKIAIOSFODNN7EXAMPLE
+```
+
+#### 4. 워크플로우 사용 시나리오
+
+**신규 프로젝트 설정:**
+1. Backend Setup 워크플로우 실행 (최초 1회)
+2. development 환경 선택하여 Terraform Apply 워크플로우 실행
+3. 필요시 stage, production 환경도 동일하게 배포
+
+**일상적인 변경 사항 배포:**
+1. 코드 변경 후 main 브랜치에 push
+2. Actions 탭에서 Terraform Apply 워크플로우 실행
+3. 변경을 적용할 환경 선택
+4. 자동으로 모든 변경 사항 배포
+
+**환경별 권한 관리:**
+- GitHub의 Environment protection rules를 사용하여 환경별 승인자 설정 가능
+- production 환경의 경우 수동 승인 필수 설정 권장
+
+### 로컬에서의 수동 작업
 
 #### 1. 변경 사항 계획 및 적용
 
