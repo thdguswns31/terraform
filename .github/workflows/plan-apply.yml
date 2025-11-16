@@ -1,0 +1,97 @@
+name: Terraform Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '배포할 환경 선택'
+        required: true
+        type: choice
+        options:
+          - development
+          - stage
+          - production
+
+jobs:
+  terraform-apply:
+    name: Terraform Apply - ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+
+    # 환경별 승인 설정 (production의 경우 수동 승인 필요)
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Terraform 설치
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.0
+
+      - name: AWS 자격 증명 구성
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: 리소스 디렉토리 목록 가져오기
+        id: get-dirs
+        run: |
+          # 선택한 환경의 하위 디렉토리 목록을 가져옴
+          dirs=$(ls -d environments/${{ github.event.inputs.environment }}/*/ 2>/dev/null | sort)
+          if [ -z "$dirs" ]; then
+            echo "환경 디렉토리가 존재하지 않습니다: environments/${{ github.event.inputs.environment }}"
+            exit 1
+          fi
+          echo "RESOURCE_DIRS<<EOF" >> $GITHUB_OUTPUT
+          echo "$dirs" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # 디렉토리 목록 출력
+          echo "배포할 리소스 디렉토리:"
+          echo "$dirs"
+
+      - name: Terraform 배포 실행
+        run: |
+          # 각 리소스 디렉토리별로 순차적으로 plan과 apply 실행
+          echo "${{ steps.get-dirs.outputs.RESOURCE_DIRS }}" | while read -r dir; do
+            if [ -n "$dir" ]; then
+              echo ""
+              echo "=========================================="
+              echo "디렉토리: $dir"
+              echo "=========================================="
+
+              cd "$GITHUB_WORKSPACE/$dir"
+
+              # Terraform 초기화
+              echo ">> Terraform 초기화 중..."
+              terraform init -backend-config="key=${{ github.event.inputs.environment }}/$(basename $dir)/terraform.tfstate"
+
+              # Terraform Plan
+              echo ">> Terraform Plan 실행 중..."
+              terraform plan -out=tfplan
+
+              # Plan 결과 표시
+              terraform show tfplan
+
+              # Terraform Apply
+              echo ">> Terraform Apply 실행 중..."
+              terraform apply tfplan
+
+              echo ">> $dir 배포 완료"
+            fi
+          done
+
+      - name: 배포 완료 알림
+        if: success()
+        run: |
+          echo "✅ ${{ github.event.inputs.environment }} 환경 Terraform 배포가 성공적으로 완료되었습니다."
+          echo "배포 시간: $(date '+%Y-%m-%d %H:%M:%S')"
+
+      - name: 배포 실패 알림
+        if: failure()
+        run: |
+          echo "❌ ${{ github.event.inputs.environment }} 환경 Terraform 배포가 실패했습니다."
+          echo "실패 시간: $(date '+%Y-%m-%d %H:%M:%S')"
