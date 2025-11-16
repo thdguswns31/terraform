@@ -99,7 +99,7 @@ export AWS_DEFAULT_REGION="ap-northeast-2"
 
 현재 프로젝트는 다음 리소스가 미리 존재해야 합니다:
 
-- **Security Group**: `sg-0f7898374d2abd21c`
+- **Security Group**: `sg-058b785b4a8b1af91`
 - **IAM Instance Profile**: `development-ec2-profile`
 
 ## 초기 설정
@@ -371,7 +371,7 @@ common_tags = {
 
 **공통 설정**:
 - AMI: Amazon Linux 2023 (최신 버전)
-- Security Group: `sg-0f7898374d2abd21c`
+- Security Group: `sg-058b785b4a8b1af91`
 - IAM Profile: `development-ec2-profile`
 - Subnet: Public Subnet
 - EBS 암호화: 활성화

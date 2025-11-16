@@ -7,7 +7,7 @@ network_state_bucket = "terraform-state-20251109"
 network_state_key    = "development/network/terraform.tfstate"
 
 # Security Configuration
-security_group_id    = "sg-0f7898374d2abd21c"
+security_group_id    = "sg-058b785b4a8b1af91"
 iam_instance_profile = "development-ec2-profile"
 
 # EBS Configuration (applied to all instances)

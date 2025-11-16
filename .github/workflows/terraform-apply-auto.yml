@@ -1,0 +1,205 @@
+name: Terraform Auto Apply (Dev/Staging)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+      - 'modules/**'
+      - 'environments/development/**'
+      - 'environments/staging/**'
+      - '.github/workflows/terraform-*.yml'
+
+env:
+  TF_VERSION: '1.13.0'
+  AWS_REGION: 'ap-northeast-2'
+  TF_LOG: INFO
+
+jobs:
+  detect-changes:
+    name: Detect Environment Changes
+    runs-on: ubuntu-latest
+    outputs:
+      environments: ${{ steps.detect.outputs.environments }}
+      matrix: ${{ steps.detect.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed environments
+        id: detect
+        run: |
+          # 변경된 파일들 확인
+          CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)
+
+          # 자동 배포 가능한 환경만 확인 (production 제외)
+          ENVIRONMENTS=""
+          if echo "$CHANGED_FILES" | grep -q "modules/"; then
+            # 모듈이 변경된 경우 dev와 staging만
+            ENVIRONMENTS="development staging"
+          else
+            # 특정 환경만 변경된 경우
+            for env in development staging; do
+              if echo "$CHANGED_FILES" | grep -q "environments/$env/"; then
+                ENVIRONMENTS="$ENVIRONMENTS $env"
+              fi
+            done
+          fi
+
+          # 결과 출력
+          if [ -z "$ENVIRONMENTS" ]; then
+            echo "environments=[]" >> $GITHUB_OUTPUT
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+          else
+            ENV_JSON="["
+            MATRIX_JSON="{\"include\":["
+            for env in $ENVIRONMENTS; do
+              ENV_JSON="$ENV_JSON\"$env\","
+              MATRIX_JSON="$MATRIX_JSON{\"environment\":\"$env\"},"
+            done
+            ENV_JSON="${ENV_JSON%,}]"
+            MATRIX_JSON="${MATRIX_JSON%,}]}"
+
+            echo "environments=$ENV_JSON" >> $GITHUB_OUTPUT
+            echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+
+            echo "Environments to deploy: $ENVIRONMENTS"
+          fi
+
+  terraform-apply:
+    name: Apply - ${{ matrix.environment }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.environments != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      max-parallel: 1  # 순차적으로 배포
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: ${{ matrix.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ matrix.environment == 'development' && secrets.AWS_ROLE_DEVELOPMENT || matrix.environment == 'staging' && secrets.AWS_ROLE_STAGING || secrets.AWS_ROLE_PRODUCTION }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: terraform-apply-${{ matrix.environment }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Find Terraform directories
+        id: find-dirs
+        run: |
+          DIRS=$(find environments/${{ matrix.environment }} -name "*.tf" -type f -exec dirname {} \; | sort -u)
+          echo "dirs<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIRS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Terraform Apply
+        id: apply
+        run: |
+          APPLY_RESULTS=""
+          APPLY_STATUS="success"
+
+          while IFS= read -r dir; do
+            [ -z "$dir" ] && continue
+
+            echo "::group::Applying $dir"
+            cd "${{ github.workspace }}/$dir"
+
+            # Initialize
+            terraform init -backend-config="key=${{ matrix.environment }}/$(basename $dir)/terraform.tfstate"
+
+            # Plan
+            terraform plan -var-file="${{ matrix.environment }}.tfvars" -out=tfplan
+
+            # Apply
+            set +e
+            APPLY_OUTPUT=$(terraform apply -auto-approve tfplan 2>&1)
+            EXITCODE=$?
+            set -e
+
+            if [ $EXITCODE -ne 0 ]; then
+              APPLY_STATUS="failed"
+              echo "::error::Terraform apply failed for $dir"
+            fi
+
+            APPLY_RESULTS="$APPLY_RESULTS
+          Directory: $dir
+          Status: $([ $EXITCODE -eq 0 ] && echo '✅ Success' || echo '❌ Failed')
+          ---"
+
+            echo "::endgroup::"
+          done <<< "${{ steps.find-dirs.outputs.dirs }}"
+
+          echo "apply_results<<EOF" >> $GITHUB_OUTPUT
+          echo "$APPLY_RESULTS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "status=$APPLY_STATUS" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub deployment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: '${{ matrix.environment }}',
+              required_contexts: [],
+              auto_merge: false,
+              description: 'Terraform apply for ${{ matrix.environment }}'
+            });
+
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.data.id,
+              state: '${{ steps.apply.outputs.status }}',
+              environment_url: '${{ matrix.environment == 'development' && vars.ENVIRONMENT_URL_DEVELOPMENT || matrix.environment == 'staging' && vars.ENVIRONMENT_URL_STAGING || vars.ENVIRONMENT_URL_PRODUCTION }}',
+              description: 'Terraform apply ${{ steps.apply.outputs.status }}'
+            });
+
+      - name: Fail job if apply failed
+        if: steps.apply.outputs.status == 'failed'
+        run: exit 1
+
+  apply-summary:
+    name: Apply Summary
+    needs: [detect-changes, terraform-apply]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🚀 Terraform Auto Apply Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          ENVIRONMENTS='${{ needs.detect-changes.outputs.environments }}'
+          if [ "$ENVIRONMENTS" = "[]" ]; then
+            echo "> ℹ️ No environments required deployment" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Deployed Environments:" >> $GITHUB_STEP_SUMMARY
+            echo "$ENVIRONMENTS" | jq -r '.[]' | while read env; do
+              echo "- $env" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Author:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
