@@ -45,30 +45,30 @@ output "t_type_instance_private_ip" {
 
 output "c_type_security_group_ids" {
   description = "Security Group IDs for C type instance"
-  value       = local.c_type.security_group_ids
+  value       = [var.security_group_id]
 }
 
 output "c_type_iam_instance_profile" {
   description = "IAM instance profile for C type instance"
-  value       = local.c_type.iam_instance_profile_name
+  value       = var.iam_instance_profile
 }
 
 output "m_type_security_group_ids" {
   description = "Security Group IDs for M type instance"
-  value       = local.m_type.security_group_ids
+  value       = [var.security_group_id]
 }
 
 output "m_type_iam_instance_profile" {
   description = "IAM instance profile for M type instance"
-  value       = local.m_type.iam_instance_profile_name
+  value       = var.iam_instance_profile
 }
 
 output "t_type_security_group_ids" {
   description = "Security Group IDs for T type instance"
-  value       = local.t_type.security_group_ids
+  value       = [var.security_group_id]
 }
 
 output "t_type_iam_instance_profile" {
   description = "IAM instance profile for T type instance"
-  value       = local.t_type.iam_instance_profile_name
+  value       = var.iam_instance_profile
 }

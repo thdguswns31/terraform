@@ -1,0 +1,137 @@
+name: Terraform Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'environments/**/*.tf'
+      - 'modules/**/*.tf'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'environments/**/*.tf'
+      - 'modules/**/*.tf'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      stack:
+        description: 'Stack to deploy'
+        required: true
+        default: 'network'
+        type: choice
+        options:
+          - network
+          - compute
+          - all
+
+env:
+  TF_VERSION: '1.13.0'
+  AWS_REGION: 'ap-northeast-2'
+
+jobs:
+  terraform-plan:
+    name: 'Terraform Plan'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: [network, compute]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init - Network
+        if: matrix.stack == 'network' || github.event.inputs.stack == 'all'
+        working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/network
+        run: terraform init
+
+      - name: Terraform Plan - Network
+        if: matrix.stack == 'network' || github.event.inputs.stack == 'all'
+        working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/network
+        run: |
+          terraform plan \
+            -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
+            -var="iam_instance_profile=${{ secrets.IAM_INSTANCE_PROFILE }}" \
+            -out=tfplan
+
+      - name: Terraform Init - Compute
+        if: matrix.stack == 'compute' || github.event.inputs.stack == 'all'
+        working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/compute
+        run: terraform init
+
+      - name: Terraform Plan - Compute
+        if: matrix.stack == 'compute' || github.event.inputs.stack == 'all'
+        working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/compute
+        run: |
+          terraform plan \
+            -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
+            -var="iam_instance_profile=${{ secrets.IAM_INSTANCE_PROFILE }}" \
+            -out=tfplan
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan-${{ matrix.stack }}
+          path: ./environments/${{ github.event.inputs.environment || 'development' }}/${{ matrix.stack }}/tfplan
+
+  terraform-apply:
+    name: 'Terraform Apply'
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment: production  # GitHub Environment for approval
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      matrix:
+        stack: [network, compute]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Download Plan
+        uses: actions/download-artifact@v3
+        with:
+          name: tfplan-${{ matrix.stack }}
+          path: ./environments/${{ github.event.inputs.environment || 'development' }}/${{ matrix.stack }}
+
+      - name: Terraform Init
+        working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/${{ matrix.stack }}
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ./environments/${{ github.event.inputs.environment || 'development' }}/${{ matrix.stack }}
+        run: terraform apply tfplan

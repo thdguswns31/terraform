@@ -29,7 +29,7 @@ variable "network_state_key" {
 variable "security_group_id" {
   description = "Security group ID for EC2 instances"
   type        = string
-  default     = "sg-02c5fbd7d50f084d1"
+  default     = "sg-0f7898374d2abd21c"
 }
 
 variable "iam_instance_profile" {
